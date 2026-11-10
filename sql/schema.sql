@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS `cs452-tides-hk.tides.observed` (
   -- bookkeeping: when and by which run each row arrived or last changed
   first_ingested_at TIMESTAMP NOT NULL,
   updated_at        TIMESTAMP NOT NULL,
-  run_id            STRING NOT NULL,   -- ingest_runs.run_id of the last run that changed it ('seed' for the bulk load)
+  run_id            STRING NOT NULL,   -- ingest_runs.run_id of the last run that changed it ('seed-<UTC time>' for the bulk load)
   PRIMARY KEY (station, t) NOT ENFORCED
 )
 PARTITION BY TIMESTAMP_TRUNC(t, MONTH)
@@ -40,7 +40,7 @@ OPTIONS (description = 'NOAA CO-OPS predicted tide, 6-min, datum MSL, metric');
 -- One row per pipeline run: the evidence for "did every scheduled run happen, what did it
 -- do, and when did it die?" Small (~100 rows/day), so no partitioning.
 CREATE TABLE IF NOT EXISTS `cs452-tides-hk.tides.ingest_runs` (
-  run_id        STRING NOT NULL,     -- unique per run (Cloud Run execution id, or 'seed')
+  run_id        STRING NOT NULL,     -- unique per run (Cloud Run execution id, or 'seed-<UTC time>')
   run_trigger   STRING NOT NULL,     -- 'scheduler', 'manual', 'seed', 'backfill'
   started_at    TIMESTAMP NOT NULL,
   finished_at   TIMESTAMP,           -- NULL if the run crashed before finishing
