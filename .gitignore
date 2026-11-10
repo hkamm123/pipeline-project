@@ -1,0 +1,20 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Data: raw seed files stay local, never committed (seeding etiquette + size)
+data/
+
+# Secrets / local config: never commit
+.env
+.env.*
+*.key
+*credentials*.json
+service-account*.json
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
