@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS `cs452-tides-hk.tides.ingest_runs` (
   run_trigger   STRING NOT NULL,     -- 'scheduler', 'manual', 'seed', 'backfill'
   started_at    TIMESTAMP NOT NULL,
   finished_at   TIMESTAMP,           -- NULL if the run crashed before finishing
-  status        STRING NOT NULL,     -- 'success', 'no_new_data', 'failed'
+  status        STRING NOT NULL,     -- 'success', 'no_new_data', 'skipped' (another run held the lock), 'failed'
   window_start  TIMESTAMP,           -- the time window requested from NOAA
   window_end    TIMESTAMP,
   obs_fetched   INT64,
@@ -79,4 +79,27 @@ SELECT
   END                             AS reading_status
 FROM `cs452-tides-hk.tides.observed` AS o
 FULL JOIN `cs452-tides-hk.tides.predicted` AS p
+  USING (station, t);
+
+-- Same as `readings`, but for a time window, with the filter applied to each table BEFORE
+-- the join. Filtering the view's `t` doesn't prune partitions: after FULL JOIN ... USING,
+-- t is COALESCE(o.t, p.t), which hides the partition column (measured: 298 MB per call
+-- through the view vs. ~10 MB through this function).
+CREATE OR REPLACE TABLE FUNCTION `cs452-tides-hk.tides.readings_between`(lo TIMESTAMP, hi TIMESTAMP) AS
+SELECT
+  station,
+  t,
+  o.water_height                  AS observed,
+  p.water_height                  AS predicted,
+  o.water_height - p.water_height AS residual,
+  o.sigma,
+  o.flags,
+  o.quality,
+  CASE
+    WHEN o.run_id IS NULL       THEN 'predicted_only'
+    WHEN o.water_height IS NULL THEN 'failed_qc'
+    ELSE 'observed'
+  END                             AS reading_status
+FROM (SELECT * FROM `cs452-tides-hk.tides.observed`  WHERE t BETWEEN lo AND hi) AS o
+FULL JOIN (SELECT * FROM `cs452-tides-hk.tides.predicted` WHERE t BETWEEN lo AND hi) AS p
   USING (station, t);

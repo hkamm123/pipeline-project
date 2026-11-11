@@ -25,6 +25,7 @@ import pyarrow.parquet as pq
 from google.cloud import bigquery, storage
 
 from pipeline import bq, noaa
+from pipeline.lock import GcsLock, Locked
 from pipeline.config import DATUM, PROJECT, STATION, table
 
 BUCKET = f"{PROJECT}-public"
@@ -40,7 +41,7 @@ def floor6(dt: datetime) -> datetime:
 def run_identity() -> tuple[str, str]:
     # Cloud Run sets CLOUD_RUN_EXECUTION for jobs; locally we make one up.
     execution = os.environ.get("CLOUD_RUN_EXECUTION")
-    trigger = os.environ.get("RUN_TRIGGER") or ("scheduler" if execution else "manual")
+    trigger = os.environ.get("RUN_TRIGGER") or ("cloud_run" if execution else "manual")
     run_id = execution or f"manual-{datetime.now(timezone.utc):%Y%m%dT%H%M%SZ}-{uuid.uuid4().hex[:6]}"
     return run_id, trigger
 
@@ -70,8 +71,8 @@ def export_latest(now: datetime) -> None:
     ]
     series = bq.query(
         f"""SELECT t, observed, predicted, residual, sigma, quality, reading_status
-            FROM `{table('readings')}`
-            WHERE station = @station AND t BETWEEN @lo AND @hi ORDER BY t""",
+            FROM `{table('readings_between')}`(@lo, @hi)   -- table function: prunes partitions
+            WHERE station = @station ORDER BY t""",
         p,
     )
     normals = bq.query(
@@ -120,6 +121,16 @@ def main() -> int:
     now6 = floor6(started)
     run = {"run_id": run_id, "run_trigger": trigger, "started_at": started, "error": None}
     print(f"run {run_id} ({trigger})")
+    lock = GcsLock(BUCKET, "locks/ingest.lock", run_id, PROJECT)
+    try:
+        lock.acquire()
+    except Locked as e:
+        # Another run is writing right now. Skipping is safe: the next run's overlapping
+        # window picks up anything this one would have fetched.
+        print(f"  skipped: {e}")
+        run.update(status="skipped", error=f"locked: {e}", finished_at=datetime.now(timezone.utc))
+        bq.record_run(run)
+        return 0
     try:
         latest = bq.latest_obs_t()
         begin = now6 - LOOKBACK
@@ -147,6 +158,8 @@ def main() -> int:
         run.update(status="failed", error=f"{type(e).__name__}: {e}"[:2000])
         print(f"  FAILED: {run['error']}", file=sys.stderr)
         code = 1  # non-zero exit: Cloud Run marks the execution failed (alerts watch this)
+    finally:
+        lock.release()
 
     run["finished_at"] = datetime.now(timezone.utc)
     try:

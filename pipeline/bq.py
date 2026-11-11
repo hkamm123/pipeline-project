@@ -115,8 +115,13 @@ def record_run(row: dict) -> None:
 
 
 def latest_obs_t():
-    rows = list(client().query(f"SELECT MAX(t) AS m FROM `{table('observed')}`").result())
-    return rows[0].m
+    """Newest observation time. Looks at the last ~31 days first (prunes to 1-2 partitions);
+    only if that's empty (we're far behind) does it scan the whole table."""
+    recent = f"SELECT MAX(t) AS m FROM `{table('observed')}` WHERE t > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 31 DAY)"
+    m = list(client().query(recent).result())[0].m
+    if m is None:
+        m = list(client().query(f"SELECT MAX(t) AS m FROM `{table('observed')}`").result())[0].m
+    return m
 
 
 def query(sql: str, params: list | None = None) -> list:

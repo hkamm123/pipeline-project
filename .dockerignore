@@ -1,0 +1,10 @@
+.git
+.venv
+data
+web
+docs
+seed
+tests
+sql
+deploy
+**/__pycache__
