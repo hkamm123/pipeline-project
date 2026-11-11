@@ -17,9 +17,9 @@ def client() -> bigquery.Client:
     return _client
 
 
-def load_parquet(path: Path, staging: str) -> int:
+def load_parquet(path: Path, staging: str, expire_hours: int = 24) -> int:
     """Load a Parquet file into a staging table with a load job (free, unlike streaming inserts).
-    The staging table is replaced each time and expires after a day."""
+    The staging table is replaced each time and expires on its own."""
     job = client().load_table_from_file(
         path.open("rb"),
         table(staging),
@@ -30,7 +30,7 @@ def load_parquet(path: Path, staging: str) -> int:
     )
     job.result()
     t = client().get_table(table(staging))
-    t.expires = datetime.now(timezone.utc) + timedelta(days=1)
+    t.expires = datetime.now(timezone.utc) + timedelta(hours=expire_hours)
     client().update_table(t, ["expires"])
     return t.num_rows
 
@@ -117,3 +117,8 @@ def record_run(row: dict) -> None:
 def latest_obs_t():
     rows = list(client().query(f"SELECT MAX(t) AS m FROM `{table('observed')}`").result())
     return rows[0].m
+
+
+def query(sql: str, params: list | None = None) -> list:
+    job = client().query(sql, job_config=bigquery.QueryJobConfig(query_parameters=params or []))
+    return list(job.result())
