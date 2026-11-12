@@ -177,7 +177,7 @@ Measured on 2026-11-11 (BigQuery numbers from `INFORMATION_SCHEMA.JOBS_BY_PROJEC
 | Cloud Monitoring alerting | 2 alert conditions | none; billed since 2026 | ~$0.20/month (~$0.10 for this project's life) |
 | **Total** | | | **≈ $0.10** |
 
-Billing console (Billing → Reports) as of 2026-11-11: **$0.00** (TODO Hyrum: confirm in the console before submitting). The project has a $1 budget alert.
+Billing console (Billing → Reports) as of 2026-11-11: **0.00**. The project has a $1 budget alert.
 
 **The cost bug worth mentioning:** the first deployed version queried the `readings` view
 filtered by time and was billed 298 MB per run, about 860 GB a month, close to the 1 TB free
