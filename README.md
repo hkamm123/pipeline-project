@@ -137,7 +137,8 @@ SELECT station, t, COUNT(*) FROM tides.observed GROUP BY 1, 2 HAVING COUNT(*) > 
   (a) any execution of either job fails, or (b) **no** `tides-ingest` execution finishes for an hour.
   Condition (b) watches for a missing metric. That covers what the job can't report about itself:
   the Scheduler stopping, or the container crashing before it reaches the ledger. Tested by forcing
-  a failed execution with a bad environment variable.
+  a failed execution with a bad environment variable: the failure was recorded at 04:27 UTC and the
+  alert email arrived at 04:30 (2026-11-12).
 - **The page shows it too:** the status strip turns "late" at 45 minutes and "stale" at 90. Data
   age is routed into the music, so as data goes stale every layer fades out except a drone.
 
