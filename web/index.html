@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tidal Drift: Anchorage tides as ambient music</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/tone@15.1.22/build/Tone.js"></script>
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+  <header>
+    <div class="title">
+      <h1>Tidal Drift</h1>
+      <p>Generative ambient music played by the tide at Anchorage, Alaska (NOAA station 9455920).
+        Every 15 minutes a Cloud Run job pulls new readings into BigQuery and writes the file this page plays.</p>
+    </div>
+    <button id="play" class="play">▶ Play</button>
+  </header>
+
+  <section id="status" class="status" aria-live="polite"></section>
+  <div id="error" class="error" hidden></div>
+
+  <section class="chartbox">
+    <div class="chart-head">
+      <h2 id="clock">Loading…</h2>
+      <ul class="legend">
+        <li><i class="ln obs"></i>Observed</li>
+        <li><i class="ln pred"></i>Predicted</li>
+        <li><i class="ln now"></i>Nowcast (prediction + latest residual)</li>
+        <li><i class="sw up"></i>Sea higher than predicted</li>
+        <li><i class="sw down"></i>Lower</li>
+        <li><i class="sw band"></i>Typical for this month (p10–p90)</li>
+        <li><i class="ln ph"></i>Playhead</li>
+      </ul>
+    </div>
+    <div class="chartwrap">
+      <canvas id="chart" aria-label="Water level at Anchorage: observed, predicted and nowcast, two days back and two days ahead"></canvas>
+      <div id="tooltip" class="tooltip" hidden></div>
+    </div>
+    <details class="tableview"><summary>Show the latest readings as a table</summary><div id="table"></div></details>
+  </section>
+
+  <main id="controls"></main>
+
+  <footer>
+    Data: NOAA CO-OPS, water level above mean sea level, metric. Pipeline: Cloud Scheduler → Cloud Run job → BigQuery → latest.json in Cloud Storage → this page.
+    <a href="https://github.com/hkamm123/pipeline-project">Source</a>
+  </footer>
+</body>
+</html>

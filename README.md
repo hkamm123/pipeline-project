@@ -11,3 +11,7 @@ Cloud Storage → Tone.js page (+ Looker Studio for liveness)
 - Seed download: `uv run python -m seed.download_history`
 
 _Work in progress._
+
+## Music page
+
+Live: https://storage.googleapis.com/cs452-tides-hk-public/index.html (source in `web/`, deploy with `bash deploy/deploy-web.sh`).
