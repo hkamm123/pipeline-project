@@ -27,7 +27,6 @@ flowchart LR
   end
   BQ[("BigQuery: tides<br/>observed · predicted<br/>ingest_runs · normals")]
   GCS[("Cloud Storage<br/>latest.json")] --> WEB["Browser page<br/>Tone.js + canvas chart"]
-  BQ --> LS[Looker Studio]
   CR -. metrics .-> MON["Cloud Monitoring alert<br/>→ email"]
 ```
 
@@ -39,7 +38,7 @@ flowchart LR
 | Buffer | none (see [Why no buffer](#why-no-buffer)) | |
 | Store | **BigQuery** (dataset `tides`, US) | Columnar, partitioned by month; 10 GB storage and 1 TB of queries free each month |
 | Serving | `latest.json` in a public Cloud Storage bucket | The page never queries BigQuery: one small file per run instead of a query per visitor |
-| Alive? | Run ledger table, page status strip, Looker Studio, email alert | |
+| Alive? | Run ledger table (`ingest_runs`), page status strip, email alert | |
 
 ## Data model ([sql/schema.sql](sql/schema.sql))
 
