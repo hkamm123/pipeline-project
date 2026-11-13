@@ -16,17 +16,18 @@ flowchart LR
   subgraph seed["Seed: one time, from my laptop"]
     N1[NOAA CO-OPS API] -->|"download_history.py<br/>month by month, resumable"| RAW[("data/raw/*.json.gz<br/>48 MB, kept locally")]
     RAW -->|"load_seed.py<br/>normalize to Parquet"| PQ[(Parquet)]
-    PQ -->|"load job (free)<br/>then MERGE"| BQ
   end
   subgraph trickle["Trickle: every 15 min, unattended"]
     CS["Cloud Scheduler<br/>4-59/15 * * * *"] -->|"HTTP POST, OAuth<br/>(tides-scheduler SA)"| CR["Cloud Run job<br/>tides-ingest"]
     CR -->|"fetch last 24 h<br/>+ 48 h of predictions"| N2[NOAA CO-OPS API]
-    CR -->|"Parquet → staging<br/>→ MERGE"| BQ
-    CR -->|"export"| GCS
-    CR -.->|"lock object"| GCS
   end
   BQ[("BigQuery: tides<br/>observed · predicted<br/>ingest_runs · normals")]
-  GCS[("Cloud Storage<br/>latest.json")] --> WEB["Browser page<br/>Tone.js + canvas chart"]
+  GCS[("Cloud Storage<br/>latest.json")]
+  PQ -->|"load job (free)<br/>then MERGE"| BQ
+  CR -->|"Parquet → staging<br/>→ MERGE"| BQ
+  CR -->|"export"| GCS
+  CR -.->|"lock object"| GCS
+  GCS --> WEB["Browser page<br/>Tone.js + canvas chart"]
   CR -. metrics .-> MON["Cloud Monitoring alert<br/>→ email"]
 ```
 
